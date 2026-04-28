@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Ear Trainer — 视觉预览</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,700&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F1EA;
+    --bg-2:#EDE8DD;
+    --ink:#1A1A1A;
+    --ink-2:#3B3935;
+    --ink-3:#7A766E;
+    --rule:#D9D3C4;
+    --accent:#C8553D;
+    --accent-soft:#E0B3A6;
+    --ok:#5C7A4A;
+    --warn:#B8893B;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Mono", "PingFang SC", "Hiragino Sans GB", ui-monospace, Menlo, monospace;
+    -webkit-font-smoothing:antialiased;
+    font-feature-settings:"ss01","ss02";
+  }
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 85% -10%, #ECE4D2 0%, transparent 60%),
+      radial-gradient(800px 500px at -10% 110%, #EAE2CF 0%, transparent 60%),
+      var(--bg);
+    padding:28px 32px 48px;
+  }
+
+  /* ---------- header ---------- */
+  header{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    border-bottom:1px solid var(--rule);
+    padding-bottom:14px;
+  }
+  .brand{
+    font-family:"Fraunces", serif; font-weight:400;
+    font-size:28px; letter-spacing:-.01em;
+  }
+  .brand em{ font-style:italic; color:var(--accent); font-weight:300;}
+  .meta{
+    display:flex; gap:28px; font-size:11px; color:var(--ink-3);
+    letter-spacing:.08em;
+  }
+  .meta b{ color:var(--ink); font-weight:500;}
+
+  /* ---------- layout ---------- */
+  main{
+    margin-top:28px;
+    display:grid;
+    grid-template-columns: 300px 1fr;
+    gap:44px;
+  }
+  section{ min-width:0;}
+  .col-title{
+    font-family:"Fraunces", serif; font-weight:400; font-style:italic;
+    font-size:13px; letter-spacing:.04em;
+    color:var(--ink-3);
+    margin:0 0 14px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .col-title::before{
+    content:""; display:inline-block; width:18px; height:1px; background:var(--ink-3);
+  }
+
+  /* ---------- left: settings ---------- */
+  .keys{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
+  }
+  .keychip{
+    border:1px solid var(--rule);
+    background:transparent;
+    padding:10px 0; text-align:center;
+    font-family:"Fraunces",serif; font-size:16px; font-weight:400;
+    color:var(--ink);
+    cursor:pointer; user-select:none;
+    transition:all .2s ease;
+    border-radius:2px;
+  }
+  .keychip .acc{ font-size:11px; vertical-align:super; color:var(--ink-3); margin-left:1px;}
+  .keychip:hover{ background:var(--bg-2);}
+  .keychip.active{
+    background:var(--ink); color:var(--bg);
+    border-color:var(--ink);
+  }
+  .keychip.active .acc{ color:var(--accent-soft);}
+
+  .group{ margin-top:24px;}
+  .group label{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:11px; letter-spacing:.06em; color:var(--ink-3);
+    margin-bottom:8px;
+  }
+  .group label b{ font-family:"Fraunces",serif; letter-spacing:0;
+    font-size:18px; color:var(--ink); font-weight:400;}
+  input[type=range]{
+    -webkit-appearance:none; appearance:none;
+    width:100%; height:2px; background:var(--rule); outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:16px; height:16px; border-radius:50%;
+    background:var(--accent); cursor:pointer;
+    border:3px solid var(--bg);
+    box-shadow:0 0 0 1px var(--accent);
+  }
+
+  .octaves{
+    display:flex; gap:6px; margin-top:6px;
+  }
+  .oct{
+    flex:1; padding:8px 0; text-align:center;
+    border:1px solid var(--rule); border-radius:2px;
+    font-size:12px; cursor:pointer;
+    color:var(--ink-2);
+  }
+  .oct.on{ background:var(--ink); color:var(--bg); border-color:var(--ink);}
+  .oct .num{ display:block; font-family:"Fraunces",serif; font-size:14px; margin-top:2px;}
+
+  /* ---------- degree pool ---------- */
+  .pool{
+    display:grid; grid-template-columns:repeat(6,1fr); gap:6px;
+    margin-top:6px;
+  }
+  .pool .deg{
+    padding:10px 0; text-align:center;
+    border:1px solid var(--rule); border-radius:2px;
+    font-family:"Fraunces",serif; font-size:16px; font-weight:400;
+    color:var(--ink); cursor:pointer;
+    position:relative; user-select:none;
+    transition:all .15s ease;
+  }
+  .pool .deg:hover{ background:var(--bg-2);}
+  .pool .deg.on{
+    background:var(--ink); color:var(--bg); border-color:var(--ink);
+  }
+  .pool .deg sup{
+    font-size:11px; color:var(--accent);
+    margin-right:-1px; vertical-align:super; font-style:normal;
+  }
+  .pool .deg.on sup{ color:#E0B3A6;}
+  .pool-tools{
+    display:flex; gap:6px; margin-top:8px;
+  }
+  .pool-tools .mini{
+    flex:1; padding:6px 0; text-align:center;
+    border:1px dashed var(--rule); border-radius:2px;
+    font-size:11px; color:var(--ink-3); cursor:pointer;
+    background:transparent;
+    font-family:inherit;
+  }
+  .pool-tools .mini:hover{ border-color:var(--ink); color:var(--ink);}
+
+  /* ---------- center: training ---------- */
+  .stage{
+    background:linear-gradient(180deg, #FBF8F1 0%, #F4F1EA 100%);
+    border:1px solid var(--rule);
+    border-radius:4px;
+    padding:36px 32px 28px;
+    position:relative;
+    overflow:hidden;
+  }
+  .stage::before{
+    content:""; position:absolute; inset:0;
+    background-image:
+      linear-gradient(var(--rule) 1px, transparent 1px);
+    background-size: 100% 28px;
+    opacity:.18; pointer-events:none;
+  }
+  .stage-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:24px; position:relative;
+  }
+  .round{
+    font-family:"Fraunces",serif; font-size:42px; line-height:1;
+    font-weight:300; letter-spacing:-.02em;
+  }
+  .round em{ font-style:italic; color:var(--accent);}
+  .round small{
+    display:block; font-family:"IBM Plex Mono",monospace;
+    font-size:11px; color:var(--ink-3);
+    letter-spacing:.06em;
+    margin-top:6px; font-weight:400;
+  }
+  .key-of{
+    text-align:right;
+    font-size:11px; color:var(--ink-3);
+    letter-spacing:.08em;
+  }
+  .key-of b{
+    display:block; font-family:"Fraunces",serif;
+    font-size:34px; color:var(--ink); font-weight:400;
+    letter-spacing:-.01em; margin-top:4px;
+  }
+  .key-of b sup{ font-size:18px; color:var(--accent); margin-left:2px;}
+
+  .cards{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:14px;
+    position:relative;
+  }
+  .card{
+    aspect-ratio: 3/4;
+    background:var(--bg);
+    border:1px solid var(--rule);
+    border-radius:3px;
+    display:flex; flex-direction:column;
+    justify-content:space-between;
+    padding:14px 14px 16px;
+    cursor:pointer;
+    position:relative;
+    transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  }
+  .card:hover{ transform:translateY(-2px); box-shadow:0 8px 24px -16px rgba(0,0,0,.25); border-color:var(--ink-3);}
+  .card .idx{
+    font-family:"Fraunces",serif; font-style:italic; font-weight:300;
+    font-size:14px; color:var(--ink-3);
+  }
+  .card .gly{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    font-family:"Fraunces",serif; font-weight:300;
+    font-size:64px; line-height:1; color:var(--ink);
+  }
+  .card .foot{
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:10px; color:var(--ink-3);
+    letter-spacing:.06em;
+  }
+  .card.playing{
+    border-color:var(--accent);
+    background:#FBEFE9;
+  }
+  .card.playing .gly{ color:var(--accent);}
+  .card.revealed .gly{
+    font-size:58px;
+    flex-direction:column;
+    font-weight:300;
+  }
+  .card.revealed .gly .flat,
+  .card.revealed .gly .sharp{
+    font-size:30px;
+    color:var(--accent);
+    margin-right:-2px;
+    vertical-align:super;
+    font-style:normal;
+  }
+  .card.revealed .gly span{
+    font-size:10px; color:var(--ink-3); margin-top:10px;
+    font-family:"IBM Plex Mono",monospace; letter-spacing:.04em;
+  }
+
+  /* sound wave decoration on playing card */
+  .wave{
+    position:absolute; left:14px; right:14px; bottom:38px;
+    height:18px; display:flex; align-items:flex-end; gap:2px;
+    opacity:0;
+  }
+  .card.playing .wave{ opacity:1;}
+  .wave i{
+    flex:1; background:var(--accent); height:30%;
+    animation:bar .9s ease-in-out infinite;
+  }
+  .wave i:nth-child(2){ animation-delay:.1s;}
+  .wave i:nth-child(3){ animation-delay:.2s;}
+  .wave i:nth-child(4){ animation-delay:.3s;}
+  .wave i:nth-child(5){ animation-delay:.4s;}
+  .wave i:nth-child(6){ animation-delay:.5s;}
+  @keyframes bar{
+    0%,100%{ height:20%;}
+    50%{ height:90%;}
+  }
+
+  .actions{
+    margin-top:24px;
+    display:flex; gap:10px; justify-content:space-between;
+    border-top:1px dashed var(--rule);
+    padding-top:18px;
+  }
+  .btn{
+    border:1px solid var(--ink);
+    background:transparent;
+    padding:11px 20px;
+    font-family:"IBM Plex Mono",monospace;
+    font-size:12px; letter-spacing:.06em;
+    color:var(--ink); cursor:pointer; border-radius:2px;
+    transition:all .2s ease;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn:hover{ background:var(--ink); color:var(--bg);}
+  .btn.primary{ background:var(--ink); color:var(--bg);}
+  .btn.primary:hover{ background:var(--accent); border-color:var(--accent);}
+  .btn.ghost{ border-color:var(--rule); color:var(--ink-2);}
+  .btn .dot{ width:6px; height:6px; border-radius:50%; background:currentColor;}
+
+  /* ---------- right: answer panel ---------- */
+  .answer-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
+  }
+  .note{
+    aspect-ratio:1/1;
+    border:1px solid var(--rule);
+    background:var(--bg);
+    font-family:"Fraunces",serif; font-size:18px; font-weight:400;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; border-radius:2px;
+    color:var(--ink); transition:all .15s ease;
+    position:relative;
+  }
+  .note:hover{ background:var(--bg-2);}
+  .note.assigned-1{ background:var(--ink); color:var(--bg); border-color:var(--ink);}
+  .note.assigned-2{ background:var(--accent); color:var(--bg); border-color:var(--accent);}
+  .note .tag{
+    position:absolute; top:4px; right:5px;
+    font-family:"IBM Plex Mono",monospace; font-size:9px;
+    color:inherit; opacity:.7;
+  }
+  .note .acc{ font-size:12px; vertical-align:super; color:var(--ink-3); margin-left:1px;}
+  .note.assigned-1 .acc, .note.assigned-2 .acc{ color:rgba(255,255,255,.7);}
+
+  .slot-row{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
+    margin-bottom:18px;
+  }
+  .slot{
+    aspect-ratio:1/1;
+    border:1px dashed var(--ink-3);
+    background:transparent;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    border-radius:2px; gap:2px;
+  }
+  .slot .lbl{ font-size:9px; color:var(--ink-3); letter-spacing:.06em;}
+  .slot .val{ font-family:"Fraunces",serif; font-size:22px; color:var(--ink-3);}
+  .slot.filled{ border-style:solid; border-color:var(--ink); background:#fff;}
+  .slot.filled .val{ color:var(--ink);}
+  .slot.correct{ border-color:var(--ok); background:rgba(92,122,74,.08);}
+  .slot.correct .val{ color:var(--ok);}
+
+  /* ---------- footer ---------- */
+  footer{
+    margin-top:36px; padding-top:14px;
+    border-top:1px solid var(--rule);
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:11px; color:var(--ink-3);
+    letter-spacing:.06em;
+  }
+  footer .stats{ display:flex; gap:28px;}
+  footer .stats b{
+    color:var(--ink); font-family:"Fraunces",serif;
+    font-size:18px; font-weight:400; margin-right:6px; letter-spacing:0;
+  }
+  footer .sig{ font-style:italic; font-family:"Fraunces",serif; letter-spacing:0;}
+
+  /* ---------- hint band ---------- */
+  .hint{
+    position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+    background:var(--ink); color:var(--bg);
+    padding:8px 14px; border-radius:999px;
+    font-size:11px; letter-spacing:.06em;
+    opacity:.0;
+  }
+
+  /* tablet portrait fallback */
+  @media (max-width:1100px){
+    main{ grid-template-columns: 260px 1fr; gap:28px;}
+    .key-of b{ font-size:28px;}
+    .round{ font-size:34px;}
+  }
+  @media (max-width:880px){
+    main{ grid-template-columns: 1fr;}
+    .keys{ grid-template-columns:repeat(7,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">视唱练耳 <em>·</em> 音符辨识</div>
+  <div class="meta">
+    <div>训练 <b>第 03 节</b></div>
+    <div>模式 <b>单音辨识</b></div>
+    <div>版本 <b>0.1</b></div>
+  </div>
+</header>
+
+<main>
+
+  <!-- LEFT: SETTINGS -->
+  <section>
+    <h2 class="col-title">调性</h2>
+    <div class="keys">
+      <div class="keychip">C</div>
+      <div class="keychip">C<span class="acc">♯</span></div>
+      <div class="keychip">D</div>
+      <div class="keychip">D<span class="acc">♯</span></div>
+      <div class="keychip">E</div>
+      <div class="keychip">F</div>
+      <div class="keychip active">F<span class="acc">♯</span></div>
+      <div class="keychip">G</div>
+      <div class="keychip">G<span class="acc">♯</span></div>
+      <div class="keychip">A</div>
+      <div class="keychip">A<span class="acc">♯</span></div>
+      <div class="keychip">B</div>
+      <div class="keychip" style="grid-column:span 4; font-style:italic; font-size:14px; color:var(--ink-3)">— 半音阶 —</div>
+    </div>
+
+    <div class="group">
+      <label>每轮音符数 <b>4</b></label>
+      <input type="range" min="2" max="8" value="4" />
+    </div>
+
+    <div class="group">
+      <label>八度范围 <b>1 — 5 度</b></label>
+      <div class="octaves">
+        <div class="oct on"><span>第</span><span class="num">1</span></div>
+        <div class="oct on"><span>第</span><span class="num">2</span></div>
+        <div class="oct on"><span>第</span><span class="num">3</span></div>
+        <div class="oct on"><span>第</span><span class="num">4</span></div>
+        <div class="oct on"><span>第</span><span class="num">5</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <label>旋律构成音 <b>12 / 12</b></label>
+      <div class="pool">
+        <div class="deg on">1</div>
+        <div class="deg on"><sup>♭</sup>2</div>
+        <div class="deg on">2</div>
+        <div class="deg on"><sup>♭</sup>3</div>
+        <div class="deg on">3</div>
+        <div class="deg on">4</div>
+        <div class="deg on"><sup>♯</sup>4</div>
+        <div class="deg on">5</div>
+        <div class="deg on"><sup>♭</sup>6</div>
+        <div class="deg on">6</div>
+        <div class="deg on"><sup>♭</sup>7</div>
+        <div class="deg on">7</div>
+      </div>
+      <div class="pool-tools">
+        <button class="mini">全选</button>
+        <button class="mini">清空</button>
+        <button class="mini">大调 7 声</button>
+        <button class="mini">五声</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <label>音色预设 <b>钢琴</b></label>
+      <div class="octaves" style="flex-wrap:wrap; gap:6px">
+        <div class="oct on" style="flex:1 1 30%">钢琴</div>
+        <div class="oct" style="flex:1 1 30%">弦乐</div>
+        <div class="oct" style="flex:1 1 30%">长笛</div>
+        <div class="oct" style="flex:1 1 30%">吉他</div>
+        <div class="oct" style="flex:1 1 30%">合成器</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CENTER: TRAINING -->
+  <section>
+    <h2 class="col-title">聆听</h2>
+    <div class="stage">
+      <div class="stage-head">
+        <div class="round">第 <em>07</em> 轮
+          <small>点卡片可重听 · 点「显示答案」揭示音名</small>
+        </div>
+        <div class="key-of">当前调
+          <b>F<sup>♯</sup></b>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="card playing">
+          <div class="idx">一</div>
+          <div class="gly">♪</div>
+          <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="foot"><span>第 01 音</span><span>0.6 秒</span></div>
+        </div>
+        <div class="card">
+          <div class="idx">二</div>
+          <div class="gly">♪</div>
+          <div class="foot"><span>第 02 音</span><span>点击试听</span></div>
+        </div>
+        <div class="card revealed">
+          <div class="idx">三</div>
+          <div class="gly"><sup class="flat">♭</sup>3<span>级数唱名 · 小三度</span></div>
+          <div class="foot"><span>已揭示</span><span>点击试听</span></div>
+        </div>
+        <div class="card">
+          <div class="idx">四</div>
+          <div class="gly">♪</div>
+          <div class="foot"><span>第 04 音</span><span>点击试听</span></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary"><span class="dot"></span>全部播放</button>
+        <button class="btn ghost">显示答案</button>
+        <button class="btn">下一轮 →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT: ANSWER PANEL (removed — answers are revealed inline on each card) -->
+
+</main>
+
+<footer>
+  <div class="stats">
+    <div><b>06</b>已答轮数</div>
+    <div><b>78%</b>正确率</div>
+    <div><b>02:14</b>已用时</div>
+  </div>
+  <div class="sig">— 静心练耳 —</div>
+</footer>
+
+</body>
+</html>

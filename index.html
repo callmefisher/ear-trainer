@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="练耳">
+<title>视唱练耳 · 音符辨识</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,700&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F1EA; --bg-2:#EDE8DD; --ink:#1A1A1A; --ink-2:#3B3935;
+    --ink-3:#7A766E; --rule:#D9D3C4; --accent:#C8553D; --accent-soft:#E0B3A6;
+    --ok:#5C7A4A;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Mono","PingFang SC","Hiragino Sans GB",ui-monospace,Menlo,monospace;
+    -webkit-font-smoothing:antialiased;}
+  body{min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 85% -10%, #ECE4D2 0%, transparent 60%),
+      radial-gradient(800px 500px at -10% 110%, #EAE2CF 0%, transparent 60%),
+      var(--bg);
+    padding:24px 28px 48px;}
+
+  header{display:flex; align-items:flex-end; justify-content:space-between;
+    border-bottom:1px solid var(--rule); padding-bottom:14px;}
+  .brand{font-family:"Fraunces",serif; font-weight:400; font-size:26px; letter-spacing:-.01em;}
+  .brand em{font-style:italic; color:var(--accent); font-weight:300;}
+  .meta{display:flex; gap:22px; font-size:11px; color:var(--ink-3); letter-spacing:.06em;}
+  .meta b{color:var(--ink); font-weight:500;}
+
+  main{margin-top:22px; display:grid; grid-template-columns:320px 1fr; gap:36px;}
+  section{min-width:0;}
+
+  .col-title{font-family:"Fraunces",serif; font-style:italic; font-weight:400;
+    font-size:13px; letter-spacing:.04em; color:var(--ink-3);
+    margin:0 0 14px; display:flex; align-items:center; gap:10px;}
+  .col-title::before{content:""; width:18px; height:1px; background:var(--ink-3);}
+
+  /* 调性 */
+  .keys{display:grid; grid-template-columns:repeat(4,1fr); gap:6px;}
+  .keychip{border:1px solid var(--rule); background:transparent;
+    padding:11px 0; text-align:center;
+    font-family:"Fraunces",serif; font-size:16px; font-weight:400;
+    color:var(--ink); cursor:pointer; user-select:none;
+    transition:all .15s ease; border-radius:2px;}
+  .keychip .acc{font-size:11px; vertical-align:super; color:var(--ink-3); margin-left:1px;}
+  .keychip:hover{background:var(--bg-2);}
+  .keychip.active{background:var(--ink); color:var(--bg); border-color:var(--ink);}
+  .keychip.active .acc{color:var(--accent-soft);}
+
+  .group{margin-top:22px;}
+  .group label{display:flex; justify-content:space-between; align-items:baseline;
+    font-size:11px; letter-spacing:.06em; color:var(--ink-3); margin-bottom:8px;}
+  .group label b{font-family:"Fraunces",serif; font-size:18px;
+    color:var(--ink); font-weight:400; letter-spacing:0;}
+
+  input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:2px;
+    background:var(--rule); outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; appearance:none;
+    width:16px; height:16px; border-radius:50%; background:var(--accent);
+    cursor:pointer; border:3px solid var(--bg); box-shadow:0 0 0 1px var(--accent);}
+
+  .octaves{display:flex; gap:6px; margin-top:6px;}
+  .oct{flex:1; padding:9px 0; text-align:center;
+    border:1px solid var(--rule); border-radius:2px;
+    font-size:12px; cursor:pointer; color:var(--ink-2); user-select:none;
+    transition:all .15s ease; background:transparent;
+    font-family:inherit;}
+  .oct:hover{background:var(--bg-2);}
+  .oct.on{background:var(--ink); color:var(--bg); border-color:var(--ink);}
+  .oct .num{display:block; font-family:"Fraunces",serif; font-size:14px; margin-top:2px;}
+
+  /* 音色预设 5 项 */
+  .timbre-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px;}
+  .timbre-grid .oct{padding:10px 0;}
+
+  /* 构成音池 */
+  .pool{display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:6px;}
+  .deg{padding:11px 0; text-align:center;
+    border:1px solid var(--rule); border-radius:2px;
+    font-family:"Fraunces",serif; font-size:18px; font-weight:400;
+    color:var(--ink); cursor:pointer; user-select:none;
+    transition:all .12s ease; position:relative;}
+  .deg:hover{background:var(--bg-2);}
+  .deg.on{background:var(--ink); color:var(--bg); border-color:var(--ink);}
+  .deg.off{opacity:.28; border-style:dashed;}
+  .deg.off:hover{opacity:.55;}
+  .deg sup{font-size:11px; color:var(--accent);
+    margin-right:-1px; vertical-align:super; font-style:normal;}
+  .deg.on sup{color:var(--accent-soft);}
+  .pool-tools{display:flex; gap:6px; margin-top:8px;}
+  .pool-tools .mini{flex:1; padding:7px 0; text-align:center;
+    border:1px dashed var(--rule); border-radius:2px;
+    font-size:11px; color:var(--ink-3); cursor:pointer;
+    background:transparent; font-family:inherit;}
+  .pool-tools .mini:hover{border-color:var(--ink); color:var(--ink);}
+
+  /* stage */
+  .stage{background:linear-gradient(180deg, #FBF8F1 0%, #F4F1EA 100%);
+    border:1px solid var(--rule); border-radius:4px;
+    padding:32px 28px 24px; position:relative; overflow:hidden;}
+  .stage::before{content:""; position:absolute; inset:0;
+    background-image:linear-gradient(var(--rule) 1px, transparent 1px);
+    background-size:100% 28px; opacity:.15; pointer-events:none;}
+  .stage-head{display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:22px; position:relative;}
+  .round{font-family:"Fraunces",serif; font-size:40px; line-height:1;
+    font-weight:300; letter-spacing:-.02em;}
+  .round em{font-style:italic; color:var(--accent);}
+  .round small{display:block; font-family:"IBM Plex Mono",monospace;
+    font-size:11px; color:var(--ink-3); letter-spacing:.06em;
+    margin-top:6px; font-weight:400;}
+  .key-of{text-align:right; font-size:11px; color:var(--ink-3); letter-spacing:.08em;}
+  .key-of b{display:block; font-family:"Fraunces",serif; font-size:32px;
+    color:var(--ink); font-weight:400; letter-spacing:-.01em; margin-top:4px;}
+  .key-of b sup{font-size:18px; color:var(--accent); margin-left:2px;}
+
+  .cards{display:grid; gap:14px; position:relative;}
+  .card{background:var(--bg); border:1px solid var(--rule); border-radius:3px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    padding:14px 14px 16px; cursor:pointer; position:relative;
+    transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    min-height:150px;}
+  .card:hover{transform:translateY(-2px); box-shadow:0 8px 24px -16px rgba(0,0,0,.25);
+    border-color:var(--ink-3);}
+  .card .idx{font-family:"Fraunces",serif; font-style:italic; font-weight:300;
+    font-size:14px; color:var(--ink-3);}
+  .card .gly{flex:1; display:flex; align-items:center; justify-content:center;
+    font-family:"Fraunces",serif; font-weight:300; font-size:54px;
+    line-height:1; color:var(--ink);}
+  .card .foot{display:flex; justify-content:space-between; align-items:center;
+    font-size:10px; color:var(--ink-3); letter-spacing:.06em;}
+  .card.playing{border-color:var(--accent); background:#FBEFE9;}
+  .card.playing .gly{color:var(--accent);}
+  .card.revealed .gly{font-size:52px; flex-direction:column; font-weight:300;}
+  .card.revealed .gly .flat, .card.revealed .gly .sharp{
+    font-size:26px; color:var(--accent); margin-right:-2px;
+    vertical-align:super; font-style:normal;}
+  .card.revealed .gly span{font-size:10px; color:var(--ink-3); margin-top:8px;
+    font-family:"IBM Plex Mono",monospace; letter-spacing:.04em;}
+
+  .wave{position:absolute; left:14px; right:14px; bottom:38px; height:18px;
+    display:flex; align-items:flex-end; gap:2px; opacity:0;}
+  .card.playing .wave{opacity:1;}
+  .wave i{flex:1; background:var(--accent); height:30%;
+    animation:bar .9s ease-in-out infinite;}
+  .wave i:nth-child(2){animation-delay:.1s;}
+  .wave i:nth-child(3){animation-delay:.2s;}
+  .wave i:nth-child(4){animation-delay:.3s;}
+  .wave i:nth-child(5){animation-delay:.4s;}
+  .wave i:nth-child(6){animation-delay:.5s;}
+  @keyframes bar{0%,100%{height:20%;} 50%{height:90%;}}
+
+  .actions{margin-top:22px; display:flex; gap:10px; flex-wrap:wrap;
+    justify-content:space-between; border-top:1px dashed var(--rule); padding-top:18px;}
+  .btn{border:1px solid var(--ink); background:transparent;
+    padding:12px 18px; font-family:"IBM Plex Mono",monospace;
+    font-size:12px; letter-spacing:.06em; color:var(--ink);
+    cursor:pointer; border-radius:2px; transition:all .15s ease;
+    display:inline-flex; align-items:center; gap:8px;}
+  .btn:hover{background:var(--ink); color:var(--bg);}
+  .btn.primary{background:var(--ink); color:var(--bg);}
+  .btn.primary:hover{background:var(--accent); border-color:var(--accent);}
+  .btn.ghost{border-color:var(--rule); color:var(--ink-2);}
+  .btn .dot{width:6px; height:6px; border-radius:50%; background:currentColor;}
+  .btn[disabled]{opacity:.4; cursor:not-allowed;}
+
+  footer{margin-top:28px; padding-top:14px; border-top:1px solid var(--rule);
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:11px; color:var(--ink-3); letter-spacing:.06em;}
+  footer .stats{display:flex; gap:28px;}
+  footer .stats b{color:var(--ink); font-family:"Fraunces",serif;
+    font-size:18px; font-weight:400; margin-right:6px;}
+  footer .sig{font-style:italic; font-family:"Fraunces",serif;}
+
+  .toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%);
+    background:var(--ink); color:var(--bg); padding:10px 18px; border-radius:999px;
+    font-size:12px; letter-spacing:.04em; opacity:0; pointer-events:none;
+    transition:opacity .3s ease;}
+  .toast.on{opacity:.95;}
+
+  @media (max-width:1100px){
+    main{grid-template-columns:260px 1fr; gap:24px;}
+    .round{font-size:32px;}
+  }
+  @media (max-width:820px){
+    body{padding:16px 14px 40px;}
+    main{grid-template-columns:1fr; gap:20px;}
+    .keys{grid-template-columns:repeat(7,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">视唱练耳 <em>·</em> 音符辨识</div>
+  <div class="meta">
+    <div>轮次 <b id="roundLabel">01</b></div>
+    <div>模式 <b>相对音感</b></div>
+    <div id="loadStat">加载中…</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- LEFT: 设置 -->
+  <section>
+
+    <h2 class="col-title">调性 (1 = do)</h2>
+    <div class="keys" id="keyGrid"></div>
+
+    <div class="group">
+      <label>每轮音符数 <b id="noteCountLbl">4</b></label>
+      <input type="range" id="noteCountRange" min="2" max="8" value="4" />
+    </div>
+
+    <div class="group">
+      <label>八度范围 <b id="octLbl">第 3 · 4</b></label>
+      <div class="octaves" id="octBox"></div>
+    </div>
+
+    <div class="group">
+      <label>旋律构成音 <b id="poolCount">12 / 12</b></label>
+      <div class="pool" id="poolGrid"></div>
+      <div class="pool-tools">
+        <button class="mini" data-pool="all">全选</button>
+        <button class="mini" data-pool="none">清空</button>
+        <button class="mini" data-pool="maj">大调 7 声</button>
+        <button class="mini" data-pool="pent">五声</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <label>音色预设 <b id="timbreLbl">钢琴</b></label>
+      <div class="timbre-grid" id="timbreBox"></div>
+    </div>
+
+    <div class="group">
+      <label>音符间距 <b id="gapLbl">0.55s</b></label>
+      <input type="range" id="gapRange" min="30" max="120" value="55" />
+    </div>
+
+  </section>
+
+  <!-- CENTER: 训练 -->
+  <section>
+    <h2 class="col-title">聆听</h2>
+    <div class="stage">
+      <div class="stage-head">
+        <div class="round">第 <em id="roundNum">01</em> 轮
+          <small>点卡片可重听 · 点「显示答案」揭示级数</small>
+        </div>
+        <div class="key-of">当前调<b id="keyOfLbl">C</b></div>
+      </div>
+
+      <div class="cards" id="cards"></div>
+
+      <div class="actions">
+        <button class="btn primary" id="btnPlayAll"><span class="dot"></span>全部播放</button>
+        <button class="btn ghost" id="btnReveal">显示答案</button>
+        <button class="btn" id="btnNext">下一轮 →</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="stats">
+    <div><b id="statRound">0</b>已答轮数</div>
+    <div><b id="statNotes">0</b>已播音数</div>
+    <div><b id="statTime">00:00</b>已用时</div>
+  </div>
+  <div class="sig">— 静心练耳 —</div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+<script>
+/* ---------------- 数据 ---------------- */
+const KEYS = [
+  {name:"C",pc:0},{name:"C♯",pc:1},{name:"D",pc:2},{name:"D♯",pc:3},
+  {name:"E",pc:4},{name:"F",pc:5},{name:"F♯",pc:6},{name:"G",pc:7},
+  {name:"G♯",pc:8},{name:"A",pc:9},{name:"A♯",pc:10},{name:"B",pc:11},
+];
+const DEGREES = [
+  {lab:"1",acc:"",off:0,cls:""},
+  {lab:"2",acc:"♭",off:1,cls:"flat"},
+  {lab:"2",acc:"",off:2,cls:""},
+  {lab:"3",acc:"♭",off:3,cls:"flat"},
+  {lab:"3",acc:"",off:4,cls:""},
+  {lab:"4",acc:"",off:5,cls:""},
+  {lab:"4",acc:"♯",off:6,cls:"sharp"},
+  {lab:"5",acc:"",off:7,cls:""},
+  {lab:"6",acc:"♭",off:8,cls:"flat"},
+  {lab:"6",acc:"",off:9,cls:""},
+  {lab:"7",acc:"♭",off:10,cls:"flat"},
+  {lab:"7",acc:"",off:11,cls:""},
+];
+// 乐器采样配置：{ baseUrl, urls }
+const INSTRUMENTS = {
+  piano: {
+    label:"钢琴",
+    baseUrl:"samples/piano/",
+    urls:{
+      "A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3",
+      "A2":"A2.mp3","C3":"C3.mp3","D#3":"Ds3.mp3","F#3":"Fs3.mp3",
+      "A3":"A3.mp3","C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3",
+      "A4":"A4.mp3","C5":"C5.mp3","D#5":"Ds5.mp3","F#5":"Fs5.mp3",
+      "A5":"A5.mp3","C6":"C6.mp3"
+    }
+  },
+  strings: {
+    label:"弦乐",
+    baseUrl:"samples/strings/",
+    urls:{"A3":"A3.mp3","C4":"C4.mp3","E4":"E4.mp3","G4":"G4.mp3",
+      "A4":"A4.mp3","C5":"C5.mp3","E5":"E5.mp3","G5":"G5.mp3",
+      "A5":"A5.mp3","C6":"C6.mp3","E6":"E6.mp3"}
+  },
+  flute: {
+    label:"长笛",
+    baseUrl:"samples/flute/",
+    urls:{"A4":"A4.mp3","C5":"C5.mp3","E5":"E5.mp3","G5":"G5.mp3",
+      "A5":"A5.mp3","C6":"C6.mp3","E6":"E6.mp3"}
+  },
+  guitar: {
+    label:"吉他",
+    baseUrl:"samples/guitar/",
+    urls:{"E2":"E2.mp3","F2":"F2.mp3","G2":"G2.mp3","A2":"A2.mp3","B2":"B2.mp3",
+      "C3":"C3.mp3","D3":"D3.mp3","E3":"E3.mp3","F3":"F3.mp3","G3":"G3.mp3","A3":"A3.mp3","B3":"B3.mp3",
+      "C4":"C4.mp3","D4":"D4.mp3","E4":"E4.mp3","F4":"F4.mp3","G4":"G4.mp3","A4":"A4.mp3","B4":"B4.mp3",
+      "C5":"C5.mp3","D5":"D5.mp3","E5":"E5.mp3","F5":"F5.mp3"}
+  },
+  synth: {
+    label:"合成器",
+    baseUrl:"samples/synth/",
+    urls:{"C2":"C2.mp3","D2":"D2.mp3","F2":"F2.mp3","G2":"G2.mp3","A2":"A2.mp3",
+      "C3":"C3.mp3","D3":"D3.mp3","F3":"F3.mp3","G3":"G3.mp3","A3":"A3.mp3",
+      "C4":"C4.mp3","D4":"D4.mp3","F4":"F4.mp3","G4":"G4.mp3","A4":"A4.mp3",
+      "C5":"C5.mp3","D5":"D5.mp3","F5":"F5.mp3"}
+  }
+};
+
+/* ---------------- 状态 ---------------- */
+const state = {
+  keyIdx: 0,            // 当前调：C
+  noteCount: 4,
+  octs: [false,true,true,true,false],    // 第 2·3·4
+  pool: new Array(12).fill(true),
+  timbre: "piano",
+  gap: 0.55,
+  round: 1,
+  sequence: [],          // [{deg, oct}]
+  revealed: false,
+  startTs: Date.now(),
+  totalNotes: 0,
+};
+
+/* ---------------- 采样器 ---------------- */
+let sampler = null;
+let sampleReady = false;
+const checkedUrlCache = {}; // key: baseUrl+file -> boolean
+
+async function filterAvailableUrls(cfg){
+  const out = {};
+  const checks = Object.entries(cfg.urls).map(async ([note, file])=>{
+    const full = cfg.baseUrl + file;
+    if (checkedUrlCache[full] === true){ out[note] = file; return; }
+    if (checkedUrlCache[full] === false) return;
+    try{
+      const r = await fetch(full, {method:"HEAD", cache:"no-store"});
+      const ok = r.ok;
+      checkedUrlCache[full] = ok;
+      if (ok) out[note] = file;
+    }catch(e){
+      checkedUrlCache[full] = false;
+    }
+  });
+  await Promise.all(checks);
+  return out;
+}
+
+async function loadInstrument(name){
+  sampleReady = false;
+  setStatus("加载 "+INSTRUMENTS[name].label+" 中…");
+  if (sampler){ try{ sampler.dispose(); }catch(e){} sampler = null; }
+  const cfg = INSTRUMENTS[name];
+  const urls = await filterAvailableUrls(cfg);
+  const count = Object.keys(urls).length;
+  if (count === 0){
+    setStatus("⚠︎ "+cfg.label+" 采样尚未下载完毕");
+    return;
+  }
+  sampler = new Tone.Sampler({
+    urls, baseUrl: cfg.baseUrl, release: 1.2,
+    onload: ()=>{
+      sampleReady = true;
+      setStatus("✓ "+cfg.label+" 已就绪 · "+count+" 锚点");
+    },
+    onerror: (e)=> setStatus("⚠︎ "+cfg.label+" 采样加载失败")
+  }).toDestination();
+}
+function setStatus(t){
+  document.getElementById("loadStat").innerHTML = t;
+}
+
+/* ---------------- UI 构建 ---------------- */
+// 调性
+const keyGrid = document.getElementById("keyGrid");
+KEYS.forEach((k,i)=>{
+  const el = document.createElement("div");
+  el.className = "keychip" + (i===state.keyIdx ? " active":"");
+  el.innerHTML = k.name.replace("♯",'<span class="acc">♯</span>');
+  el.addEventListener("click", ()=>{
+    state.keyIdx = i;
+    [...keyGrid.children].forEach(c=>c.classList.remove("active"));
+    el.classList.add("active");
+    document.getElementById("keyOfLbl").innerHTML =
+      k.name.replace("♯",'<sup>♯</sup>');
+  });
+  keyGrid.appendChild(el);
+});
+document.getElementById("keyOfLbl").innerHTML =
+  KEYS[state.keyIdx].name.replace("♯",'<sup>♯</sup>');
+
+// 音符数
+const noteCountRange = document.getElementById("noteCountRange");
+const noteCountLbl = document.getElementById("noteCountLbl");
+noteCountRange.addEventListener("input", ()=>{
+  state.noteCount = +noteCountRange.value;
+  noteCountLbl.textContent = state.noteCount;
+});
+
+// 八度
+const octBox = document.getElementById("octBox");
+function renderOct(){
+  octBox.innerHTML = "";
+  for (let k=1;k<=5;k++){
+    const el = document.createElement("div");
+    el.className = "oct" + (state.octs[k-1] ? " on":"");
+    el.innerHTML = `<span>第</span><span class="num">${k}</span>`;
+    el.addEventListener("click", ()=>{
+      state.octs[k-1] = !state.octs[k-1];
+      renderOct();
+      updateOctLabel();
+    });
+    octBox.appendChild(el);
+  }
+}
+function updateOctLabel(){
+  const sel = [];
+  for (let k=0;k<5;k++) if (state.octs[k]) sel.push(k+1);
+  document.getElementById("octLbl").textContent =
+    sel.length ? "第 "+sel.join(" · ") : "未选";
+}
+renderOct(); updateOctLabel();
+
+// 构成音池
+const poolGrid = document.getElementById("poolGrid");
+function renderPool(){
+  poolGrid.innerHTML = "";
+  DEGREES.forEach((d,i)=>{
+    const el = document.createElement("div");
+    el.className = "deg " + (state.pool[i] ? "on":"off");
+    el.innerHTML = (d.acc?`<sup>${d.acc}</sup>`:"") + d.lab;
+    let t=null, longPressed=false;
+    el.addEventListener("pointerdown", ()=>{
+      longPressed=false;
+      t = setTimeout(()=>{ longPressed=true; auditionDegree(i); }, 280);
+    });
+    el.addEventListener("pointerup", ()=>{
+      clearTimeout(t);
+      if (!longPressed){
+        state.pool[i] = !state.pool[i];
+        renderPool();
+      }
+    });
+    el.addEventListener("pointerleave", ()=> clearTimeout(t));
+    poolGrid.appendChild(el);
+  });
+  document.getElementById("poolCount").textContent =
+    state.pool.filter(Boolean).length + " / 12";
+}
+renderPool();
+document.querySelectorAll(".mini[data-pool]").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    const k = b.dataset.pool;
+    const M = {
+      all:  [1,1,1,1,1,1,1,1,1,1,1,1],
+      none: [0,0,0,0,0,0,0,0,0,0,0,0],
+      maj:  [1,0,1,0,1,1,0,1,0,1,0,1],
+      pent: [1,0,1,0,1,0,0,1,0,1,0,0],
+    };
+    state.pool = M[k].map(Boolean);
+    renderPool();
+  });
+});
+
+// 音色
+const timbreBox = document.getElementById("timbreBox");
+Object.keys(INSTRUMENTS).forEach(k=>{
+  const el = document.createElement("div");
+  el.className = "oct" + (k===state.timbre ? " on":"");
+  el.textContent = INSTRUMENTS[k].label;
+  el.dataset.name = k;
+  el.addEventListener("click", ()=>{
+    state.timbre = k;
+    [...timbreBox.children].forEach(c=>c.classList.remove("on"));
+    el.classList.add("on");
+    document.getElementById("timbreLbl").textContent = INSTRUMENTS[k].label;
+    loadInstrument(k);
+  });
+  timbreBox.appendChild(el);
+});
+
+// 间距
+const gapRange = document.getElementById("gapRange");
+gapRange.addEventListener("input", ()=>{
+  state.gap = +gapRange.value / 100;
+  document.getElementById("gapLbl").textContent = state.gap.toFixed(2)+"s";
+});
+
+/* ---------------- 卡片 ---------------- */
+const cardsEl = document.getElementById("cards");
+function renderCards(){
+  cardsEl.innerHTML = "";
+  const n = state.sequence.length;
+  cardsEl.style.gridTemplateColumns = `repeat(${Math.min(n,4)}, 1fr)`;
+  if (n>4) cardsEl.style.gridTemplateColumns = `repeat(4, 1fr)`;
+  const cnLabels = ["一","二","三","四","五","六","七","八"];
+  state.sequence.forEach((s,i)=>{
+    const card = document.createElement("div");
+    card.className = "card";
+    card.dataset.i = i;
+    const d = DEGREES[s.deg];
+    card.innerHTML = `
+      <div class="idx">${cnLabels[i]}</div>
+      <div class="gly">♪</div>
+      <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="foot"><span>第 ${String(i+1).padStart(2,"0")} 音</span><span>点击试听</span></div>
+    `;
+    if (state.revealed){
+      card.classList.add("revealed");
+      const gly = card.querySelector(".gly");
+      gly.innerHTML = (d.acc?`<span class="${d.cls}">${d.acc}</span>`:"")
+        + d.lab
+        + `<span>第 ${s.oct} 度 · ${midiToNoteName(degreeToMidi(s.deg,s.oct))}</span>`;
+      card.querySelector(".foot").innerHTML =
+        `<span>已揭示</span><span>点击试听</span>`;
+    }
+    card.addEventListener("click", ()=> playOne(i));
+    cardsEl.appendChild(card);
+  });
+}
+
+/* ---------------- 音高换算 ---------------- */
+function degreeToMidi(degIdx, oct){
+  const keyPc = KEYS[state.keyIdx].pc;
+  const semi = DEGREES[degIdx].off;
+  return 12*(oct+1) + keyPc + semi;
+}
+function midiToNoteName(m){
+  const names = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  return names[m%12] + (Math.floor(m/12)-1);
+}
+
+/* ---------------- 抽样 ---------------- */
+function pickSequence(){
+  const pool = []; for (let i=0;i<12;i++) if (state.pool[i]) pool.push(i);
+  const octs = []; for (let k=0;k<5;k++) if (state.octs[k]) octs.push(k+1);
+  if (!pool.length || !octs.length) return null;
+  const seq = [];
+  for (let i=0;i<state.noteCount;i++){
+    seq.push({
+      deg: pool[Math.floor(Math.random()*pool.length)],
+      oct: octs[Math.floor(Math.random()*octs.length)],
+    });
+  }
+  return seq;
+}
+
+/* ---------------- 播放 ---------------- */
+async function ensureAudio(){
+  if (Tone.context.state !== "running") await Tone.start();
+}
+function clearHighlights(){
+  [...cardsEl.children].forEach(c=>c.classList.remove("playing"));
+}
+async function playAll(){
+  if (!state.sequence.length) return;
+  await ensureAudio();
+  if (!sampleReady){ toast("采样还在加载…"); return; }
+  clearHighlights();
+  const t0 = Tone.now() + 0.05;
+  state.sequence.forEach((s,i)=>{
+    const m = degreeToMidi(s.deg, s.oct);
+    sampler.triggerAttackRelease(midiToNoteName(m), Math.max(0.3, state.gap-0.1), t0 + i*state.gap);
+    setTimeout(()=>{
+      clearHighlights();
+      cardsEl.children[i]?.classList.add("playing");
+    }, 20 + i*state.gap*1000);
+  });
+  setTimeout(clearHighlights, 20 + state.sequence.length*state.gap*1000 + 400);
+  state.totalNotes += state.sequence.length;
+  updateStats();
+}
+async function playOne(i){
+  if (!state.sequence.length) return;
+  await ensureAudio();
+  if (!sampleReady){ toast("采样还在加载…"); return; }
+  const s = state.sequence[i];
+  const m = degreeToMidi(s.deg, s.oct);
+  sampler.triggerAttackRelease(midiToNoteName(m), 0.8);
+  clearHighlights();
+  cardsEl.children[i]?.classList.add("playing");
+  setTimeout(()=> cardsEl.children[i]?.classList.remove("playing"), 600);
+  state.totalNotes += 1;
+  updateStats();
+}
+function auditionDegree(i){
+  if (!sampleReady) return;
+  let oct = 4;
+  for (let k=0;k<5;k++) if (state.octs[k]){ oct = k+1; break; }
+  const m = degreeToMidi(i, oct);
+  sampler.triggerAttackRelease(midiToNoteName(m), 0.6);
+}
+
+/* ---------------- 轮次 ---------------- */
+function newRound(){
+  const seq = pickSequence();
+  if (!seq){ toast("请至少勾选 1 个构成音和 1 个八度"); return; }
+  state.sequence = seq;
+  state.revealed = false;
+  state.round += 1;
+  document.getElementById("roundNum").textContent = String(state.round).padStart(2,"0");
+  document.getElementById("roundLabel").textContent = String(state.round).padStart(2,"0");
+  renderCards();
+  setTimeout(playAll, 200);
+}
+function reveal(){
+  state.revealed = true;
+  renderCards();
+}
+document.getElementById("btnPlayAll").addEventListener("click", async ()=>{
+  if (!state.sequence.length){
+    state.sequence = pickSequence() || [];
+    renderCards();
+  }
+  playAll();
+});
+document.getElementById("btnReveal").addEventListener("click", reveal);
+document.getElementById("btnNext").addEventListener("click", newRound);
+
+/* ---------------- 统计 ---------------- */
+function updateStats(){
+  document.getElementById("statRound").textContent = String(state.round-1).padStart(2,"0");
+  document.getElementById("statNotes").textContent = String(state.totalNotes).padStart(2,"0");
+}
+setInterval(()=>{
+  const s = Math.floor((Date.now()-state.startTs)/1000);
+  const mm = String(Math.floor(s/60)).padStart(2,"0");
+  const ss = String(s%60).padStart(2,"0");
+  document.getElementById("statTime").textContent = mm+":"+ss;
+},1000);
+
+/* ---------------- toast ---------------- */
+let toastTimer=null;
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove("on"), 1800);
+}
+
+/* ---------------- 初始化 ---------------- */
+loadInstrument(state.timbre);
+// 初始化第一轮（不自动播放，等采样加载完）
+state.sequence = pickSequence() || [];
+renderCards();
+document.getElementById("roundNum").textContent = "01";
+document.getElementById("roundLabel").textContent = "01";
+state.round = 1;
+
+// 采样就绪后自动播放第一轮
+const readyWatcher = setInterval(()=>{
+  if (sampleReady){
+    clearInterval(readyWatcher);
+    playAll();
+  }
+},150);
+</script>
+</body>
+</html>
