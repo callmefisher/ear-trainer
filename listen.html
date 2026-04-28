@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>试听 · 钢琴采样</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F1EA; --bg-2:#EDE8DD; --ink:#1A1A1A; --ink-3:#7A766E;
+    --rule:#D9D3C4; --accent:#C8553D;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Mono","PingFang SC","Hiragino Sans GB",ui-monospace,Menlo,monospace;
+    -webkit-font-smoothing:antialiased;
+  }
+  body{min-height:100vh; padding:36px 40px;}
+  h1{font-family:"Fraunces",serif; font-weight:400; font-size:30px; margin:0 0 6px;}
+  h1 em{font-style:italic; color:var(--accent); font-weight:300;}
+  .sub{font-size:12px; color:var(--ink-3); margin-bottom:24px;}
+  .row{display:flex; gap:14px; align-items:center; margin-bottom:18px; flex-wrap:wrap;}
+  .lbl{font-size:11px; color:var(--ink-3); min-width:72px;}
+  select{
+    font-family:inherit; font-size:14px; padding:8px 12px;
+    border:1px solid var(--rule); background:#fff; border-radius:2px; color:var(--ink);
+  }
+  button{
+    font-family:inherit; font-size:13px; padding:10px 16px;
+    border:1px solid var(--ink); background:transparent; color:var(--ink);
+    border-radius:2px; cursor:pointer;
+    transition:all .15s ease;
+  }
+  button:hover{background:var(--ink); color:var(--bg);}
+  button.primary{background:var(--ink); color:var(--bg);}
+  button.primary:hover{background:var(--accent); border-color:var(--accent);}
+  .deg-grid{
+    display:grid; grid-template-columns:repeat(12,minmax(0,1fr));
+    gap:8px; margin-top:12px; max-width:980px;
+  }
+  .deg{
+    aspect-ratio:1/1.15;
+    border:1px solid var(--rule); background:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-family:"Fraunces",serif; font-size:26px; font-weight:400;
+    color:var(--ink); cursor:pointer; border-radius:3px;
+    user-select:none;
+    transition:all .12s ease;
+    position:relative;
+  }
+  .deg:hover{ background:var(--bg-2);}
+  .deg.off{
+    opacity:.28; background:transparent;
+    border-style:dashed;
+  }
+  .deg.off:hover{ opacity:.6;}
+  .deg:active, .deg.ring{
+    background:var(--accent); color:#fff; border-color:var(--accent);
+    transform:translateY(1px);
+  }
+  .deg sup{font-size:15px; color:var(--accent); margin-right:-2px; vertical-align:super; font-style:normal;}
+  .deg.ring sup{color:#ffd6cb;}
+  .deg small{
+    position:absolute; bottom:4px; left:0; right:0; text-align:center;
+    font-family:"IBM Plex Mono",monospace; font-size:9px;
+    color:var(--ink-3); letter-spacing:.04em;
+  }
+  .deg.ring small{color:rgba(255,255,255,.7);}
+  .status{margin-top:22px; font-size:12px; color:var(--ink-3);}
+  .status b{color:var(--ink);}
+  .bar{display:flex; gap:10px; align-items:center; margin-top:18px;}
+</style>
+</head>
+<body>
+
+<h1>试听 <em>·</em> 钢琴采样</h1>
+<div class="sub">选调性 + 勾选构成音池 + 八度范围，点击「▶︎ 播放随机旋律」会连奏 4 个音。</div>
+
+<div class="row">
+  <span class="lbl">调性 (1=do)</span>
+  <select id="keySel"></select>
+  <span class="lbl">八度范围</span>
+  <span id="octBox" style="display:inline-flex; gap:6px;"></span>
+  <span class="lbl">音符数</span>
+  <select id="countSel">
+    <option>2</option><option>3</option>
+    <option selected>4</option>
+    <option>5</option><option>6</option><option>7</option><option>8</option>
+  </select>
+  <button id="playMelody" class="primary">▶︎ 播放随机旋律</button>
+  <button id="replay">↻ 重听</button>
+  <span class="status" id="status">采样加载中…</span>
+</div>
+
+<div class="row" style="align-items:flex-start;">
+  <span class="lbl" style="padding-top:8px;">构成音池</span>
+  <div class="deg-grid" id="grid" style="flex:1; max-width:980px;"></div>
+</div>
+
+<div class="row">
+  <span class="lbl">快捷</span>
+  <button id="poolAll">全选</button>
+  <button id="poolNone">清空</button>
+  <button id="poolMaj">大调 7 声</button>
+  <button id="poolPent">五声</button>
+  <span class="lbl" id="poolCount" style="margin-left:12px;">已选 12 / 12</span>
+</div>
+
+<div class="row">
+  <span class="lbl">本轮旋律</span>
+  <span id="lastSeq" style="font-family:'Fraunces',serif; font-size:18px; color:var(--ink-3);">—</span>
+</div>
+
+<script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+<script>
+// ---------- 基础数据 ----------
+const KEYS = [
+  {name:"C", pc:0},{name:"C♯", pc:1},{name:"D", pc:2},{name:"D♯", pc:3},
+  {name:"E", pc:4},{name:"F", pc:5},{name:"F♯", pc:6},{name:"G", pc:7},
+  {name:"G♯", pc:8},{name:"A", pc:9},{name:"A♯", pc:10},{name:"B", pc:11},
+];
+// 12 级数：[label, semitoneOffset]
+const DEGREES = [
+  {lab:"1",   acc:"",  off:0},
+  {lab:"2",   acc:"♭", off:1},
+  {lab:"2",   acc:"",  off:2},
+  {lab:"3",   acc:"♭", off:3},
+  {lab:"3",   acc:"",  off:4},
+  {lab:"4",   acc:"",  off:5},
+  {lab:"4",   acc:"♯", off:6},
+  {lab:"5",   acc:"",  off:7},
+  {lab:"6",   acc:"♭", off:8},
+  {lab:"6",   acc:"",  off:9},
+  {lab:"7",   acc:"♭", off:10},
+  {lab:"7",   acc:"",  off:11},
+];
+
+// ---------- UI 构建 ----------
+const keySel = document.getElementById("keySel");
+KEYS.forEach((k,i)=>{
+  const o = document.createElement("option");
+  o.value = i; o.textContent = k.name + " 调";
+  if (k.name==="C") o.selected = true;
+  keySel.appendChild(o);
+});
+
+const grid = document.getElementById("grid");
+const poolState = new Array(12).fill(true); // default: all selected
+
+function renderPool(){
+  grid.innerHTML = "";
+  DEGREES.forEach((d,i)=>{
+    const el = document.createElement("div");
+    el.className = "deg" + (poolState[i] ? "" : " off");
+    el.dataset.idx = i;
+    el.innerHTML = (d.acc?`<sup>${d.acc}</sup>`:"") + d.lab
+      + `<small>${semiName(d.off)}</small>`;
+    // tap = toggle; long-press = audition
+    let pressTimer = null, longPressed = false;
+    el.addEventListener("pointerdown", (e)=>{
+      longPressed = false;
+      pressTimer = setTimeout(()=>{
+        longPressed = true;
+        auditionDegree(i);
+      }, 280);
+    });
+    el.addEventListener("pointerup", ()=>{
+      clearTimeout(pressTimer);
+      if (!longPressed) togglePool(i);
+    });
+    el.addEventListener("pointerleave", ()=> clearTimeout(pressTimer));
+    grid.appendChild(el);
+  });
+  updatePoolCount();
+}
+function togglePool(i){
+  poolState[i] = !poolState[i];
+  grid.children[i].classList.toggle("off", !poolState[i]);
+  updatePoolCount();
+}
+function updatePoolCount(){
+  const n = poolState.filter(Boolean).length;
+  document.getElementById("poolCount").textContent = `已选 ${n} / 12`;
+}
+function semiName(off){
+  const n = ["do","ra","re","me","mi","fa","fi","sol","le","la","te","ti"];
+  return n[off];
+}
+
+// ---------- 八度范围复选 ----------
+const octBox = document.getElementById("octBox");
+const octState = [false, true, true, true, false]; // 默认 2/3/4 度
+function renderOct(){
+  octBox.innerHTML = "";
+  for (let k=1;k<=5;k++){
+    const b = document.createElement("button");
+    b.textContent = "第"+k;
+    b.className = octState[k-1] ? "primary" : "";
+    b.addEventListener("click", ()=>{
+      octState[k-1] = !octState[k-1];
+      renderOct();
+    });
+    octBox.appendChild(b);
+  }
+}
+renderOct();
+renderPool();
+
+// ---------- 快捷音池 ----------
+function setPool(mask){
+  for (let i=0;i<12;i++) poolState[i] = !!mask[i];
+  renderPool();
+}
+document.getElementById("poolAll").onclick  = ()=> setPool([1,1,1,1,1,1,1,1,1,1,1,1]);
+document.getElementById("poolNone").onclick = ()=> setPool([0,0,0,0,0,0,0,0,0,0,0,0]);
+// 大调 7 声：1 2 3 4 5 6 7
+document.getElementById("poolMaj").onclick  = ()=> setPool([1,0,1,0,1,1,0,1,0,1,0,1]);
+// 五声：1 2 3 5 6
+document.getElementById("poolPent").onclick = ()=> setPool([1,0,1,0,1,0,0,1,0,1,0,0]);
+
+// ---------- 音频 ----------
+const sampler = new Tone.Sampler({
+  urls: {
+    "A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3",
+    "A2":"A2.mp3","C3":"C3.mp3","D#3":"Ds3.mp3","F#3":"Fs3.mp3",
+    "A3":"A3.mp3","C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3",
+    "A4":"A4.mp3","C5":"C5.mp3","D#5":"Ds5.mp3","F#5":"Fs5.mp3",
+    "A5":"A5.mp3","C6":"C6.mp3",
+  },
+  baseUrl: "samples/piano/",
+  release: 1.2,
+  onload: ()=>{
+    document.getElementById("status").innerHTML = "✓ 已就绪 · <b>"+18+"</b> 个锚点采样";
+  }
+}).toDestination();
+
+function degreeToMidi(degIdx, oct){
+  const keyPc = KEYS[+keySel.value].pc;
+  const semi  = DEGREES[degIdx].off;
+  return 12*(oct+1) + keyPc + semi;
+}
+function midiToNoteName(m){
+  const names = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  return names[m%12] + (Math.floor(m/12)-1);
+}
+function highlight(i){
+  const el = grid.children[i]; if (!el) return;
+  el.classList.add("ring");
+  setTimeout(()=>el.classList.remove("ring"), 320);
+}
+function auditionDegree(i){
+  // 用第一个勾选的八度，若没有就第 4
+  let oct = 4;
+  for (let k=0;k<5;k++) if (octState[k]){ oct = k+1; break; }
+  const m = degreeToMidi(i, oct);
+  sampler.triggerAttackRelease(midiToNoteName(m), 0.7);
+  highlight(i);
+}
+
+// ---------- 随机旋律 ----------
+let lastSequence = null;
+function pickRandomMelody(){
+  const poolIdxs = [];
+  for (let i=0;i<12;i++) if (poolState[i]) poolIdxs.push(i);
+  const octs = [];
+  for (let k=0;k<5;k++) if (octState[k]) octs.push(k+1);
+  if (!poolIdxs.length || !octs.length) return null;
+  const n = +document.getElementById("countSel").value;
+  const seq = [];
+  for (let i=0;i<n;i++){
+    const di = poolIdxs[Math.floor(Math.random()*poolIdxs.length)];
+    const oc = octs[Math.floor(Math.random()*octs.length)];
+    seq.push({deg:di, oct:oc});
+  }
+  return seq;
+}
+function playSequence(seq){
+  if (!seq) return;
+  const t0 = Tone.now() + 0.05;
+  const dt = 0.55;
+  seq.forEach((note,k)=>{
+    const m = degreeToMidi(note.deg, note.oct);
+    sampler.triggerAttackRelease(midiToNoteName(m), 0.45, t0 + k*dt);
+    setTimeout(()=> highlight(note.deg), 50 + k*dt*1000);
+  });
+  // 展示当前序列
+  document.getElementById("lastSeq").textContent = seq.map(s=>{
+    const d = DEGREES[s.deg];
+    return (d.acc||"") + d.lab + "·第"+s.oct;
+  }).join("  ");
+}
+
+document.getElementById("playMelody").addEventListener("click", async ()=>{
+  await Tone.start();
+  lastSequence = pickRandomMelody();
+  if (!lastSequence){
+    document.getElementById("status").textContent = "⚠︎ 请至少选一个构成音和一个八度";
+    return;
+  }
+  playSequence(lastSequence);
+});
+document.getElementById("replay").addEventListener("click", async ()=>{
+  await Tone.start();
+  if (lastSequence) playSequence(lastSequence);
+});
+</script>
+</body>
+</html>
