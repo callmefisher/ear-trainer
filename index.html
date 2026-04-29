@@ -129,11 +129,11 @@
     min-height:150px;}
   .card:hover{transform:translateY(-2px); box-shadow:0 8px 24px -16px rgba(0,0,0,.25);
     border-color:var(--ink-3);}
-  .card .idx{font-family:"Fraunces",serif; font-style:italic; font-weight:300;
-    font-size:14px; color:var(--ink-3);}
-  .card .gly{flex:1; display:flex; align-items:center; justify-content:center;
+  .card .gly{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
     font-family:"Fraunces",serif; font-weight:300; font-size:54px;
-    line-height:1; color:var(--ink);}
+    line-height:1; color:var(--ink); gap:4px;}
+  .oct-dots-top,.oct-dots-bottom{display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .oct-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:block;margin-top:0;}
   .card .foot{display:flex; justify-content:space-between; align-items:center;
     font-size:10px; color:var(--ink-3); letter-spacing:.06em;}
   .card.playing{border-color:var(--accent); background:#FBEFE9;}
@@ -221,7 +221,7 @@
     </div>
 
     <div class="group">
-      <label>八度范围 <b id="octLbl">第 3 · 4</b></label>
+      <label>八度范围 <b id="octLbl">中央C · +1</b></label>
       <div class="octaves" id="octBox"></div>
     </div>
 
@@ -239,11 +239,6 @@
     <div class="group">
       <label>音色预设 <b id="timbreLbl">钢琴</b></label>
       <div class="timbre-grid" id="timbreBox"></div>
-    </div>
-
-    <div class="group">
-      <label>音符间距 <b id="gapLbl">0.55s</b></label>
-      <input type="range" id="gapRange" min="30" max="120" value="55" />
     </div>
 
   </section>
@@ -352,10 +347,10 @@ const INSTRUMENTS = {
 const state = {
   keyIdx: 0,            // 当前调：C
   noteCount: 4,
-  octs: [false,true,true,true,false],    // 第 2·3·4
+  octs: [false,false,true,true,false,false],    // 索引: 0=-2, 1=-1, 2=中央C, 3=+1, 4=+2, 5=+3；默认选中央C和+1
   pool: new Array(12).fill(true),
   timbre: "piano",
-  gap: 0.55,
+  tempo: 100,            // BPM，决定一拍时长 = 60/tempo 秒
   round: 1,
   sequence: [],          // [{deg, oct}]
   revealed: false,
@@ -440,14 +435,20 @@ noteCountRange.addEventListener("input", ()=>{
 
 // 八度
 const octBox = document.getElementById("octBox");
+const OCT_LABELS = ["−2", "−1", "中央C", "+1", "+2", "+3"];   // 索引 0..5 → 相对中央 C 的偏移
 function renderOct(){
   octBox.innerHTML = "";
-  for (let k=1;k<=5;k++){
+  for (let k=0;k<6;k++){
     const el = document.createElement("div");
-    el.className = "oct" + (state.octs[k-1] ? " on":"");
-    el.innerHTML = `<span>第</span><span class="num">${k}</span>`;
+    el.className = "oct" + (state.octs[k] ? " on":"");
+    if (k===2){
+      el.innerHTML = `<span class="num" style="font-size:13px; margin-top:4px; line-height:1.1;">中央C</span>`;
+    } else {
+      const offset = k - 2;
+      el.innerHTML = `<span>${offset>0?"高":"低"}</span><span class="num">${offset>0?"+":""}${offset}</span>`;
+    }
     el.addEventListener("click", ()=>{
-      state.octs[k-1] = !state.octs[k-1];
+      state.octs[k] = !state.octs[k];
       renderOct();
       updateOctLabel();
     });
@@ -456,9 +457,9 @@ function renderOct(){
 }
 function updateOctLabel(){
   const sel = [];
-  for (let k=0;k<5;k++) if (state.octs[k]) sel.push(k+1);
+  for (let k=0;k<6;k++) if (state.octs[k]) sel.push(OCT_LABELS[k]);
   document.getElementById("octLbl").textContent =
-    sel.length ? "第 "+sel.join(" · ") : "未选";
+    sel.length ? sel.join(" · ") : "未选";
 }
 renderOct(); updateOctLabel();
 
@@ -520,12 +521,7 @@ Object.keys(INSTRUMENTS).forEach(k=>{
   timbreBox.appendChild(el);
 });
 
-// 间距
-const gapRange = document.getElementById("gapRange");
-gapRange.addEventListener("input", ()=>{
-  state.gap = +gapRange.value / 100;
-  document.getElementById("gapLbl").textContent = state.gap.toFixed(2)+"s";
-});
+// 间距相关 UI 已移除；每轮节奏由 makeRhythm() 生成
 
 /* ---------------- 卡片 ---------------- */
 const cardsEl = document.getElementById("cards");
@@ -534,26 +530,35 @@ function renderCards(){
   const n = state.sequence.length;
   cardsEl.style.gridTemplateColumns = `repeat(${Math.min(n,4)}, 1fr)`;
   if (n>4) cardsEl.style.gridTemplateColumns = `repeat(4, 1fr)`;
-  const cnLabels = ["一","二","三","四","五","六","七","八"];
   state.sequence.forEach((s,i)=>{
     const card = document.createElement("div");
     card.className = "card";
     card.dataset.i = i;
     const d = DEGREES[s.deg];
+    const octOffset = s.oct;
+    let dotsTop = '';
+    let dotsBottom = '';
+    if (octOffset > 0) {
+      for (let j = 0; j < octOffset; j++) dotsTop += '<span class="oct-dot"></span>';
+    } else if (octOffset < 0) {
+      for (let j = 0; j < Math.abs(octOffset); j++) dotsBottom += '<span class="oct-dot"></span>';
+    }
     card.innerHTML = `
-      <div class="idx">${cnLabels[i]}</div>
       <div class="gly">♪</div>
       <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="foot"><span>第 ${String(i+1).padStart(2,"0")} 音</span><span>点击试听</span></div>
+      <div class="foot"><span>第 ${String(i+1).padStart(2,"0")} 音</span></div>
     `;
     if (state.revealed){
       card.classList.add("revealed");
       const gly = card.querySelector(".gly");
-      gly.innerHTML = (d.acc?`<span class="${d.cls}">${d.acc}</span>`:"")
+      gly.innerHTML =
+        (dotsTop ? '<div class="oct-dots-top">' + dotsTop + '</div>' : '')
+        + (d.acc?`<span class="${d.cls}">${d.acc}</span>`:"")
         + d.lab
-        + `<span>第 ${s.oct} 度 · ${midiToNoteName(degreeToMidi(s.deg,s.oct))}</span>`;
+        + `<span>${s.oct===0?"中央C":"中央C"+(s.oct>0?"+":"")+s.oct} · ${midiToNoteName(degreeToMidi(s.deg,s.oct))}</span>`
+        + (dotsBottom ? '<div class="oct-dots-bottom">' + dotsBottom + '</div>' : '');
       card.querySelector(".foot").innerHTML =
-        `<span>已揭示</span><span>点击试听</span>`;
+        `<span>第 ${String(i+1).padStart(2,"0")} 音</span>`;
     }
     card.addEventListener("click", ()=> playOne(i));
     cardsEl.appendChild(card);
@@ -561,10 +566,12 @@ function renderCards(){
 }
 
 /* ---------------- 音高换算 ---------------- */
-function degreeToMidi(degIdx, oct){
+function degreeToMidi(degIdx, octOffset){
+  // octOffset 是相对中央 C 的偏移：-2..+2；中央 C 所在 MIDI 八度为 4
   const keyPc = KEYS[state.keyIdx].pc;
   const semi = DEGREES[degIdx].off;
-  return 12*(oct+1) + keyPc + semi;
+  const midiOct = octOffset + 4;
+  return 12*(midiOct+1) + keyPc + semi;
 }
 function midiToNoteName(m){
   const names = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
@@ -574,16 +581,51 @@ function midiToNoteName(m){
 /* ---------------- 抽样 ---------------- */
 function pickSequence(){
   const pool = []; for (let i=0;i<12;i++) if (state.pool[i]) pool.push(i);
-  const octs = []; for (let k=0;k<5;k++) if (state.octs[k]) octs.push(k+1);
+  const octs = []; for (let k=0;k<6;k++) if (state.octs[k]) octs.push(k-2); // 存相对中央 C 的偏移 -2..+3
   if (!pool.length || !octs.length) return null;
+  const rhythm = makeRhythm(state.noteCount);
   const seq = [];
   for (let i=0;i<state.noteCount;i++){
     seq.push({
       deg: pool[Math.floor(Math.random()*pool.length)],
       oct: octs[Math.floor(Math.random()*octs.length)],
+      dur: rhythm[i],  // 时值，单位「拍」
     });
   }
   return seq;
+}
+
+// 每轮用一个两小节（4/4，共 8 拍）的模板采样节奏，保证律动自然
+// 基本单位：1 = 四分；0.5 = 八分；1.5 = 附点四分；2 = 二分
+function makeRhythm(n){
+  // 若干已调好比例的节奏模板（每条总时长 ≈ 一到两小节）
+  const TEMPLATES = [
+    [1, 1, 1, 1],              // 平稳四分
+    [0.5, 0.5, 1, 1],          // 前密后疏
+    [1, 0.5, 0.5, 1],          // 抑扬
+    [1.5, 0.5, 1, 1],          // 附点开头
+    [0.5, 0.5, 0.5, 0.5, 1, 1],
+    [1, 1, 0.5, 0.5, 1],
+    [2, 1, 1],                  // 长—短—短
+    [1, 2, 1],
+    [0.5, 1, 0.5, 1, 1],
+    [1, 0.5, 1.5],
+    [0.75, 0.25, 1, 1],         // 轻切分
+    [1, 1, 0.5, 0.5, 0.5, 0.5],
+  ];
+  // 选一条"音数≤请求数"的模板，然后裁剪/补足到 n 个
+  let picked = TEMPLATES[Math.floor(Math.random()*TEMPLATES.length)].slice();
+  while (picked.length < n){
+    // 把最长的一个拆成两个一半
+    let maxIdx = 0;
+    for (let i=1;i<picked.length;i++) if (picked[i]>picked[maxIdx]) maxIdx = i;
+    const v = picked[maxIdx] / 2;
+    picked.splice(maxIdx, 1, v, v);
+  }
+  if (picked.length > n) picked = picked.slice(0, n);
+  // 保证最后一个音"稍长"以产生终止感（50% 概率延长 1.5 倍）
+  if (Math.random() < 0.5) picked[picked.length-1] *= 1.5;
+  return picked;
 }
 
 /* ---------------- 播放 ---------------- */
@@ -598,16 +640,22 @@ async function playAll(){
   await ensureAudio();
   if (!sampleReady){ toast("采样还在加载…"); return; }
   clearHighlights();
+  const beatSec = 60 / state.tempo;
   const t0 = Tone.now() + 0.05;
+  let acc = 0;  // 相对 t0 的累积起始时间（秒）
   state.sequence.forEach((s,i)=>{
+    const startRel = acc;
+    const durSec = s.dur * beatSec;
+    const playDur = Math.max(0.25, durSec * 0.92);  // 留一点 release 间隙
     const m = degreeToMidi(s.deg, s.oct);
-    sampler.triggerAttackRelease(midiToNoteName(m), Math.max(0.3, state.gap-0.1), t0 + i*state.gap);
+    sampler.triggerAttackRelease(midiToNoteName(m), playDur, t0 + startRel);
     setTimeout(()=>{
       clearHighlights();
       cardsEl.children[i]?.classList.add("playing");
-    }, 20 + i*state.gap*1000);
+    }, 20 + startRel*1000);
+    acc += durSec;
   });
-  setTimeout(clearHighlights, 20 + state.sequence.length*state.gap*1000 + 400);
+  setTimeout(clearHighlights, 20 + acc*1000 + 400);
   state.totalNotes += state.sequence.length;
   updateStats();
 }
@@ -626,8 +674,8 @@ async function playOne(i){
 }
 function auditionDegree(i){
   if (!sampleReady) return;
-  let oct = 4;
-  for (let k=0;k<5;k++) if (state.octs[k]){ oct = k+1; break; }
+  let oct = 0;  // 默认中央C
+  for (let k=0;k<6;k++) if (state.octs[k]){ oct = k-2; break; }
   const m = degreeToMidi(i, oct);
   sampler.triggerAttackRelease(midiToNoteName(m), 0.6);
 }
