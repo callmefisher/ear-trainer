@@ -259,6 +259,7 @@
       <div class="actions">
         <button class="btn primary" id="btnPlayAll"><span class="dot"></span>全部播放</button>
         <button class="btn ghost" id="btnReveal">显示答案</button>
+        <button class="btn" id="btnDotsOnly">圆点模式 ●</button>
         <button class="btn" id="btnNext">下一轮 →</button>
       </div>
     </div>
@@ -354,6 +355,7 @@ const state = {
   round: 1,
   sequence: [],          // [{deg, oct}]
   revealed: false,
+  dotsOnly: true,
   startTs: Date.now(),
   totalNotes: 0,
 };
@@ -551,14 +553,21 @@ function renderCards(){
     if (state.revealed){
       card.classList.add("revealed");
       const gly = card.querySelector(".gly");
-      gly.innerHTML =
-        (dotsTop ? '<div class="oct-dots-top">' + dotsTop + '</div>' : '')
-        + (d.acc?`<span class="${d.cls}">${d.acc}</span>`:"")
-        + d.lab
-        + `<span>${s.oct===0?"中央C":"中央C"+(s.oct>0?"+":"")+s.oct} · ${midiToNoteName(degreeToMidi(s.deg,s.oct))}</span>`
-        + (dotsBottom ? '<div class="oct-dots-bottom">' + dotsBottom + '</div>' : '');
-      card.querySelector(".foot").innerHTML =
-        `<span>第 ${String(i+1).padStart(2,"0")} 音</span>`;
+      if (state.dotsOnly){
+        gly.innerHTML =
+          (dotsTop ? '<div class="oct-dots-top">' + dotsTop + '</div>' : '')
+          + (d.acc?`<span class="${d.cls}">${d.acc}</span>`:"")
+          + d.lab
+          + (dotsBottom ? '<div class="oct-dots-bottom">' + dotsBottom + '</div>' : '');
+      } else {
+        gly.innerHTML =
+          (dotsTop ? '<div class="oct-dots-top">' + dotsTop + '</div>' : '')
+          + (d.acc?`<span class="${d.cls}">${d.acc}</span>`:"")
+          + d.lab
+          + `<span>${s.oct===0?"中央C":"中央C"+(s.oct>0?"+":"")+s.oct} · ${midiToNoteName(degreeToMidi(s.deg,s.oct))}</span>`
+          + (dotsBottom ? '<div class="oct-dots-bottom">' + dotsBottom + '</div>' : '');
+      }
+      card.querySelector(".foot").innerHTML = '';
     }
     card.addEventListener("click", ()=> playOne(i));
     cardsEl.appendChild(card);
@@ -705,6 +714,13 @@ document.getElementById("btnPlayAll").addEventListener("click", async ()=>{
 });
 document.getElementById("btnReveal").addEventListener("click", reveal);
 document.getElementById("btnNext").addEventListener("click", newRound);
+document.getElementById("btnDotsOnly").addEventListener("click", ()=>{
+  state.dotsOnly = !state.dotsOnly;
+  const btn = document.getElementById("btnDotsOnly");
+  btn.textContent = state.dotsOnly ? "圆点模式 ●" : "圆点模式 ○";
+  btn.classList.toggle("primary", state.dotsOnly);
+  if (state.revealed) renderCards();
+});
 
 /* ---------------- 统计 ---------------- */
 function updateStats(){
